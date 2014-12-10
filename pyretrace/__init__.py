@@ -1,7 +1,9 @@
 import argparse
 import re
 import sys
-from reader import MappingReader
+
+from pyretrace.reader import MappingReader
+
 
 STACK_TRACE_EXPRESSION = "(?:.*?\\bat\\s+%c\\.%m\\s*\\(.*?(?::%l)?\\)\\s*)|(?:(?:.*?[:\"]\\s+)?%c(?::.*)?)"
 
@@ -417,15 +419,15 @@ def external_class_name(internal_class_name):
     return internal_class_name.replace(JAVA_PACKAGE_SEPARATOR, CLASS_PACKAGE_SEPARATOR)
 
 
-def parse_args(args=None):
+def parse_args():
     parser = argparse.ArgumentParser(description='Filter logcat by package name')
-    parser.add_argument("--regex", dest="regex", default=STACK_TRACE_EXPRESSION,
+    parser.add_argument("--regex", "-r", dest="regex", default=STACK_TRACE_EXPRESSION,
                         help="regex to match upon")
-    parser.add_argument("--verbose", action="store_true", dest="verbose", default=False,
+    parser.add_argument("--verbose", "-v", action="store_true", dest="verbose", default=False,
                         help="print verbose log")
-    parser.add_argument("--mapping", dest="mapping_file", default=None, required=True,
+    parser.add_argument("--mapping", "-m", dest="mapping_file", default=None, required=True,
                         help="mapping file to deobfuscate against")
-    parser.add_argument("--stacktrace", dest="stacktrace_file", default=None,
+    parser.add_argument("--stacktrace", "-s", dest="stacktrace_file", default=None,
                         help="stack trace to deobfuscate. If none provided, Retrace will deobfuscate standard input")
 
     options = parser.parse_args()
@@ -433,12 +435,12 @@ def parse_args(args=None):
     return options
 
 
-def main(argv):
-    options = parse_args(argv)
+def main():
+    options = parse_args()
     retrace = Retrace(options.regex, options.verbose, options.mapping_file, options.stacktrace_file)
 
     retrace.execute()
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()
