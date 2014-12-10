@@ -34,21 +34,20 @@ class Retrace():
             'a': REGEX_ARGUMENTS
         }
 
-    def execute(self):
         # Read the mapping file.
         mapping_reader = MappingReader(self.mapping_file)
         mapping_reader.pump(self)
 
         expression_buffer = ''
-        expression_types = list(xrange(32))
-        expression_type_count = 0
+        self.expression_types = list(xrange(32))
+        self.expression_type_count = 0
 
         index = 0
         while True:
             next_index = self.regular_expression.find('%', index)
             if next_index < 0 or \
                next_index is (len(self.regular_expression) - 1) or \
-               expression_type_count is len(expression_types):
+               self.expression_type_count is len(self.expression_types):
                 break
 
             expression_buffer += self.regular_expression[index: next_index]
@@ -59,130 +58,132 @@ class Retrace():
             expression_buffer += self.options[expression_type]
             expression_buffer += ')'
 
-            expression_types[expression_type_count] = expression_type
-            expression_type_count += 1
+            self.expression_types[self.expression_type_count] = expression_type
+            self.expression_type_count += 1
 
             index = next_index + 2
 
         expression_buffer += self.regular_expression[index: len(self.regular_expression)]
 
-        pattern = re.compile(expression_buffer)
+        self.pattern = re.compile(expression_buffer)
+
+    ''' Will start looping over stacktrace_file or sys.stdin, deobfuscating line by line
+    '''
+    def execute(self):
 
         # Open the stack trace file.
         if self.stacktrace_file:
             reader = open(self.stacktrace_file, 'r')
         else:
             reader = sys.stdin
-        try:
-            class_name = None
 
-            while True:
-                line = reader.readline()
-                if not line:
-                    break
+        while True:
+            line = reader.readline()
+            if not line:
+                break
 
-                # Try to match it against the regular expression.
-                matcher = pattern.match(line)
+            print self.deobfuscate(line)
 
-                if matcher:
-                    line_number = 0
-                    type = None
-                    arguments = None
-
-                    for expression_type_index in range(0, expression_type_count):
-                        start_index = matcher.start(expression_type_index + 1)
-                        if start_index >= 0:
-                            match = matcher.group(expression_type_index + 1)
-
-                            expression_type = expression_types[expression_type_index]
-
-                            if expression_type == 'c':
-                                class_name = self.original_class_name(match)
-                            elif expression_type == 'C':
-                                class_name = self.original_class_name(external_class_name(match))
-                            elif expression_type == 'l':
-                                line_number = int(match)
-                            elif expression_type == 't':
-                                type = self.original_type(match)
-                            elif expression_type == 'a':
-                                arguments = self.original_arguments(match)
-
-
-                    # Deconstruct the input line and reconstruct the output
-                    # line. Also collect any additional output lines for this
-                    # line.
-
-                    line_index = 0
-                    out_line = ''
-                    extra_outlines = []
-
-                    for expression_type_index in range(0, expression_type_count):
-                        start_index = matcher.start(expression_type_index + 1)
-                        if start_index >= 0:
-                            end_index = matcher.end(expression_type_index + 1)
-                            match = matcher.group(expression_type_index + 1)
-
-                            # Copy a literal piece of the input line.
-                            out_line += line[line_index: start_index]
-                            # Copy a matched and translated piece of the input line.
-                            expression_type = expression_types[expression_type_index]
-
-                            if expression_type == 'c':
-                                class_name = self.original_class_name(match)
-                                out_line += class_name
-                            elif expression_type == 'C':
-                                class_name = self.original_class_name(external_class_name(match))
-                                out_line += external_class_name(match)
-                            elif expression_type == 'l':
-                                line_number = int(match)
-                                out_line += match
-                            elif expression_type == 't':
-                                type = self.original_type(match)
-                                out_line += type
-                            elif expression_type == 'f':
-                                out_line += self.original_field_name(class_name,
-                                                                     match,
-                                                                     type,
-                                                                     out_line,
-                                                                     extra_outlines)
-                            elif expression_type == 'm':
-                                out_line += self.original_method_name(class_name,
-                                                                      match,
-                                                                      line_number,
-                                                                      type,
-                                                                      arguments,
-                                                                      out_line,
-                                                                      extra_outlines)
-                            elif expression_type == 'a':
-                                arguments = self.original_arguments(match)
-                                out_line += arguments
-
-                            # Skip the original element whose processed version
-                            # has just been appended.
-                            line_index = end_index
-
-                    # Copy the last literal piece of the input line.
-                    out_line += line[line_index: len(line)]
-
-                    # Print out the processed line.
-                    print out_line.strip()
-
-                    for extra_line_index in range(0, len(extra_outlines)):
-                        print extra_line_index
-
-                else:
-                    # The line didn't match the regular expression.
-                    # Print out the original line.
-                    print line
-        except Exception as detail:
-            raise IOError('Can\'t read stack trace (%s)' % detail)
-
-        finally:
-            reader.close()
-
-
+    '''Return a deobfuscated version of the given line
+      :rtype: str
     '''
-    Finds the original field name(s), appending the first one to the out
+    def deobfuscate(self, line):
+        # Try to match it against the regular expression.
+        matcher = self.pattern.match(line)
+
+        if matcher:
+            line_number = 0
+            type = None
+            arguments = None
+
+            for expression_type_index in range(0, self.expression_type_count):
+                start_index = matcher.start(expression_type_index + 1)
+                if start_index >= 0:
+                    match = matcher.group(expression_type_index + 1)
+
+                    expression_type = self.expression_types[expression_type_index]
+
+                    if expression_type == 'c':
+                        class_name = self.original_class_name(match)
+                    elif expression_type == 'C':
+                        class_name = self.original_class_name(external_class_name(match))
+                    elif expression_type == 'l':
+                        line_number = int(match)
+                    elif expression_type == 't':
+                        type = self.original_type(match)
+                    elif expression_type == 'a':
+                        arguments = self.original_arguments(match)
+
+
+            # Deconstruct the input line and reconstruct the output
+            # line. Also collect any additional output lines for this
+            # line.
+
+            line_index = 0
+            out_line = ''
+            extra_outlines = []
+
+            for expression_type_index in range(0, self.expression_type_count):
+                start_index = matcher.start(expression_type_index + 1)
+                if start_index >= 0:
+                    end_index = matcher.end(expression_type_index + 1)
+                    match = matcher.group(expression_type_index + 1)
+
+                    # Copy a literal piece of the input line.
+                    out_line += line[line_index: start_index]
+                    # Copy a matched and translated piece of the input line.
+                    expression_type = self.expression_types[expression_type_index]
+
+                    if expression_type == 'c':
+                        class_name = self.original_class_name(match)
+                        out_line += class_name
+                    elif expression_type == 'C':
+                        class_name = self.original_class_name(external_class_name(match))
+                        out_line += external_class_name(match)
+                    elif expression_type == 'l':
+                        line_number = int(match)
+                        out_line += match
+                    elif expression_type == 't':
+                        type = self.original_type(match)
+                        out_line += type
+                    elif expression_type == 'f':
+                        out_line += self.original_field_name(class_name,
+                                                             match,
+                                                             type,
+                                                             out_line,
+                                                             extra_outlines)
+                    elif expression_type == 'm':
+                        out_line += self.original_method_name(class_name,
+                                                              match,
+                                                              line_number,
+                                                              type,
+                                                              arguments,
+                                                              out_line,
+                                                              extra_outlines)
+                    elif expression_type == 'a':
+                        arguments = self.original_arguments(match)
+                        out_line += arguments
+
+                    # Skip the original element whose processed version
+                    # has just been appended.
+                    line_index = end_index
+
+            # Copy the last literal piece of the input line.
+            out_line += line[line_index: len(line)]
+
+            # Print out the processed line.
+            output = out_line.strip()
+
+            for extra_line_index in range(0, len(extra_outlines)):
+                output += extra_line_index
+
+            return output
+        else:
+            # The line didn't match the regular expression.
+            # Print out the original line.
+            return line
+
+    ''' Finds the original field name(s), appending the first one to the out
     line, and any additional alternatives to the extra lines.
     '''
 
