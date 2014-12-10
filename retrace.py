@@ -47,8 +47,8 @@ class Retrace():
         while True:
             next_index = self.regular_expression.find('%', index)
             if next_index < 0 or \
-                            next_index is (len(self.regular_expression) - 1) or \
-                            expression_type_count is len(expression_types):
+               next_index is (len(self.regular_expression) - 1) or \
+               expression_type_count is len(expression_types):
                 break
 
             expression_buffer += self.regular_expression[index: next_index]
@@ -140,10 +140,19 @@ class Retrace():
                                 type = self.original_type(match)
                                 out_line += type
                             elif expression_type == 'f':
-                                out_line += self.original_field_name(class_name, match, type, out_line, extra_outlines)
+                                out_line += self.original_field_name(class_name,
+                                                                     match,
+                                                                     type,
+                                                                     out_line,
+                                                                     extra_outlines)
                             elif expression_type == 'm':
-                                out_line += self.original_method_name(class_name, match, line_number, type, arguments, out_line,
-                                                          extra_outlines)
+                                out_line += self.original_method_name(class_name,
+                                                                      match,
+                                                                      line_number,
+                                                                      type,
+                                                                      arguments,
+                                                                      out_line,
+                                                                      extra_outlines)
                             elif expression_type == 'a':
                                 arguments = self.original_arguments(match)
                                 out_line += arguments
@@ -156,7 +165,7 @@ class Retrace():
                     out_line += line[line_index: len(line)]
 
                     # Print out the processed line.
-                    print out_line
+                    print out_line.strip()
 
                     for extra_line_index in range(0, len(extra_outlines)):
                         print extra_line_index
@@ -218,8 +227,7 @@ class Retrace():
             return ''
 
 
-    def original_method_name(self, class_name, obfuscated_method_name, line_number, type, arguments, out_line,
-                             extra_outlines):
+    def original_method_name(self, class_name, obfuscated_method_name, line_number, type, arguments, out_line, extra_outlines):
         extra_indent = -1
         original_method_name = ''
 
@@ -242,7 +250,7 @@ class Retrace():
                             original_method_name += method_info.original_name
 
                             if self.verbose:
-                                out_line = '%s(%s)' % (out_line, method_info.arguments)
+                                original_method_name = '%s(%s)' % (out_line, method_info.arguments)
                         else:
                             extra_buffer = ''
                             for counter in range(0, extra_indent):
@@ -259,11 +267,11 @@ class Retrace():
                                     # Store the additional line.
                                     extra_outlines.append(extra_buffer)
 
-            # Just append the obfuscated name if we haven't found any matching methods.
-            if extra_indent < 0:
-                return obfuscated_method_name
-            else:
-                return original_method_name
+        # Just append the obfuscated name if we haven't found any matching methods.
+        if extra_indent < 0:
+            original_method_name += obfuscated_method_name
+
+        return original_method_name
 
 
     '''
