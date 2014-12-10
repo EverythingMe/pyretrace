@@ -74,7 +74,7 @@ class MappingReader():
         space_index = line.find(' ', colon_index2 + 2)
         argument_index1 = line.find('(', space_index + 1)
         argument_index2 = -1 if argument_index1 < 0 else line.find(')', argument_index1 + 1)
-        arrow_index = line.find("->", max(space_index, argument_index2) + 1)
+        arrow_index = line.find('->', max(space_index, argument_index2) + 1)
 
         if space_index < 0 or arrow_index < 0:
             return
@@ -82,12 +82,12 @@ class MappingReader():
         # Extract the elements.
         type = line[colon_index2 + 1: space_index].strip()
         name = line[space_index + 1: argument_index1 if argument_index1 >= 0 else arrow_index].strip()
-        new_name = line[arrow_index + 2].strip()
+        new_name = line[arrow_index + 2: len(line)].strip()
 
         # Process this class member mapping.
         if len(type) > 0 and \
-                        len(name) > 0 and \
-                        len(new_name) > 0:
+           len(name) > 0 and \
+           len(new_name) > 0:
 
             # Is it a field or a method?
             if argument_index2 < 0:
@@ -97,10 +97,10 @@ class MappingReader():
                 last_line_number = 0
 
                 if colon_index2 > 0:
-                    first_line_number = int(line[0, colon_index1].strip())
+                    first_line_number = int(line[0: colon_index1].strip())
                     last_line_number = int(line[colon_index1 + 1: colon_index2].strip())
 
-                arguments = line[argument_index1 + 1, argument_index2].strip()
+                arguments = line[argument_index1 + 1: argument_index2].strip()
 
                 mapping_processor.process_method_mapping(class_name,
                                                          first_line_number,

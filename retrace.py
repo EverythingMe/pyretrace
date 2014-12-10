@@ -74,9 +74,6 @@ class Retrace():
         else:
             reader = sys.stdin
         try:
-            # out_line = ''
-            # extra_outlines = []
-
             class_name = None
 
             while True:
@@ -87,7 +84,7 @@ class Retrace():
                 # Try to match it against the regular expression.
                 matcher = pattern.match(line)
 
-                if True:
+                if matcher:
                     line_number = 0
                     type = None
                     arguments = None
@@ -95,7 +92,6 @@ class Retrace():
                     for expression_type_index in range(0, expression_type_count):
                         start_index = matcher.start(expression_type_index + 1)
                         if start_index >= 0:
-                            end_index = matcher.end(expression_type_index + 1)
                             match = matcher.group(expression_type_index + 1)
 
                             expression_type = expression_types[expression_type_index]
@@ -128,6 +124,7 @@ class Retrace():
 
                             # Copy a literal piece of the input line.
                             out_line += line[line_index: start_index]
+                            # Copy a matched and translated piece of the input line.
                             expression_type = expression_types[expression_type_index]
 
                             if expression_type == 'c':
@@ -143,9 +140,9 @@ class Retrace():
                                 type = self.original_type(match)
                                 out_line += type
                             elif expression_type == 'f':
-                                self.original_field_name(class_name, match, type, out_line, extra_outlines)
+                                out_line += self.original_field_name(class_name, match, type, out_line, extra_outlines)
                             elif expression_type == 'm':
-                                self.original_method_name(class_name, match, line_number, type, arguments, out_line,
+                                out_line += self.original_method_name(class_name, match, line_number, type, arguments, out_line,
                                                           extra_outlines)
                             elif expression_type == 'a':
                                 arguments = self.original_arguments(match)
@@ -216,12 +213,15 @@ class Retrace():
 
         # Just append the obfuscated name if we haven't found any matching fields.
         if extra_indent < 0:
-            out_line += obfuscated_field_name
+            return obfuscated_field_name
+        else:
+            return ''
 
 
     def original_method_name(self, class_name, obfuscated_method_name, line_number, type, arguments, out_line,
                              extra_outlines):
         extra_indent = -1
+        original_method_name = ''
 
         # Class name -> obfuscated method names.
         method_map = self.class_method_map.get(class_name)
@@ -238,8 +238,8 @@ class Retrace():
 
                             # Append the first original name.
                             if self.verbose:
-                                out_line += method_info.type + ' '
-                            out_line += method_info.original_name
+                                original_method_name += method_info.type + ' '
+                            original_method_name += method_info.original_name
 
                             if self.verbose:
                                 out_line = '%s(%s)' % (out_line, method_info.arguments)
@@ -261,7 +261,9 @@ class Retrace():
 
             # Just append the obfuscated name if we haven't found any matching methods.
             if extra_indent < 0:
-                out_line += obfuscated_method_name
+                return obfuscated_method_name
+            else:
+                return original_method_name
 
 
     '''
@@ -287,9 +289,9 @@ class Retrace():
         index = obfuscated_type.find('[')
 
         if index >= 0:
-            self.original_class_name(obfuscated_type[0, index]) + obfuscated_type[index, len(obfuscated_type)]
+            return self.original_class_name(obfuscated_type[0, index]) + obfuscated_type[index, len(obfuscated_type)]
         else:
-            self.original_class_name(obfuscated_type)
+            return self.original_class_name(obfuscated_type)
 
     '''
     Returns the original class name.
@@ -342,7 +344,7 @@ class Retrace():
         method_map = self.class_method_map.get(class_name)
         if not method_map:
             method_map = dict()
-            self.class_method_map.put(class_name, method_map)
+            self.class_method_map[class_name] = method_map
 
         # Obfuscated method name -> methods.
         method_set = method_map.get(new_method_name)
@@ -355,7 +357,7 @@ class Retrace():
                                   last_line_number,
                                   method_return_type,
                                   method_arguments,
-                                  method_name));
+                                  method_name))
 
 
 '''
@@ -386,7 +388,8 @@ class MethodInfo():
         self.original_name = original_name
 
     def matches(self, line_number, type, arguments):
-        return (line_number == 0 or (self.first_line_number <= line_number and line_number <= self.last_line_number) or self.last_line_number == 0) and \
+        return (line_number == 0 or (
+            self.first_line_number <= line_number and line_number <= self.last_line_number) or self.last_line_number == 0) and \
                (type is None or type == self.type) and \
                (arguments is None or arguments == self.arguments)
 
