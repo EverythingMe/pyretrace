@@ -12,7 +12,7 @@ or if you're having permission issues
 
 	$ git clone https://github.com/EverythingMe/pyretrace.git
 	cd pyretrace
-	pip install .
+	sudo pip install .
 	
 	
 ### Usage
