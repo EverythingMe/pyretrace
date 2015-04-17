@@ -16,7 +16,7 @@ REGEX_ARGUMENTS = "(?:" + REGEX_TYPE + "(?:\\s*,\\s*" + REGEX_TYPE + ")*)?"
 
 
 class Retrace():
-    def __init__(self, regular_expression, verbose, mapping_file, stacktrace_file=None):
+    def __init__(self, mapping_file, verbose=False, regular_expression=STACK_TRACE_EXPRESSION, stacktrace_file=None):
         self.regular_expression = regular_expression
         self.verbose = verbose
         self.mapping_file = mapping_file
@@ -69,9 +69,10 @@ class Retrace():
 
         self.pattern = re.compile(expression_buffer)
 
-    ''' Will start looping over stacktrace_file or sys.stdin, deobfuscating line by line
-    '''
     def execute(self):
+        """
+        Will start looping over stacktrace_file or sys.stdin, deobfuscating line by line
+        """
 
         # Open the stack trace file.
         if self.stacktrace_file:
@@ -84,12 +85,16 @@ class Retrace():
             if not line:
                 break
 
-            print self.deobfuscate(line)
+            print self.deobfuscate(line, False)
 
-    '''Return a deobfuscated version of the given line
-      :rtype: str
-    '''
-    def deobfuscate(self, line):
+    def deobfuscate_class(self, line):
+        return self.original_class_name(line, False)
+
+    def deobfuscate(self, line, simple_name):
+        """Return a deobfuscated version of the given line
+        :rtype: str
+        """
+
         # Try to match it against the regular expression.
         matcher = self.pattern.match(line)
 
@@ -106,9 +111,9 @@ class Retrace():
                     expression_type = self.expression_types[expression_type_index]
 
                     if expression_type == 'c':
-                        class_name = self.original_class_name(match)
+                        class_name = self.original_class_name(match, simple_name)
                     elif expression_type == 'C':
-                        class_name = self.original_class_name(external_class_name(match))
+                        class_name = self.original_class_name(external_class_name(match), simple_name)
                     elif expression_type == 'l':
                         line_number = int(match)
                     elif expression_type == 't':
@@ -137,10 +142,10 @@ class Retrace():
                     expression_type = self.expression_types[expression_type_index]
 
                     if expression_type == 'c':
-                        class_name = self.original_class_name(match)
+                        class_name = self.original_class_name(match, simple_name)
                         out_line += class_name
                     elif expression_type == 'C':
-                        class_name = self.original_class_name(external_class_name(match))
+                        class_name = self.original_class_name(external_class_name(match), simple_name)
                         out_line += external_class_name(match)
                     elif expression_type == 'l':
                         line_number = int(match)
@@ -185,11 +190,10 @@ class Retrace():
             # Print out the original line.
             return line
 
-    ''' Finds the original field name(s), appending the first one to the out
-    line, and any additional alternatives to the extra lines.
-    '''
-
     def original_field_name(self, class_name, obfuscated_field_name, type, out_line, extra_outlines):
+        """Finds the original field name(s), appending the first one to the out
+        line, and any additional alternatives to the extra lines.
+        """
         extra_indent = -1
 
         # class name -> obfuscated field names
@@ -276,12 +280,11 @@ class Retrace():
 
         return original_method_name
 
-
-    '''
-        Returns the original argument types.
-    '''
-
     def original_arguments(self, obfuscated_arguments):
+        """
+        Returns the original argument types.
+        """
+
         original_arguments = ''
 
         start_index = 0
@@ -304,23 +307,25 @@ class Retrace():
         else:
             return self.original_class_name(obfuscated_type)
 
-    '''
-    Returns the original class name.
-    '''
+    def original_class_name(self, obfuscated_class_name, simple_name):
+        """
+        Returns the original class name.
+        """
 
-    def original_class_name(self, obfuscated_class_name):
         original_class_name = self.class_map.get(obfuscated_class_name)
 
         if original_class_name:
+            if simple_name:
+                original_class_name = original_class_name[original_class_name.rfind('.') + 1: len(original_class_name)]
             return original_class_name
         else:
             return obfuscated_class_name
 
-    '''
-    Implementations for MappingProcessor.
-    '''
-
     def process_class_mapping(self, class_name, new_class_name):
+        """
+        Implementations for MappingProcessor.
+        """
+
         # Obfuscated class name -> original class name.
         self.class_map[new_class_name] = class_name
 
@@ -371,12 +376,10 @@ class Retrace():
                                   method_name))
 
 
-'''
-a field record
-'''
-
-
 class FieldInfo():
+    """
+    a field record
+    """
     def __init__(self, type, original_name):
         self.type = type
         self.original_name = original_name
@@ -385,12 +388,11 @@ class FieldInfo():
         return type is None or type is self.type
 
 
-'''
-A Method record
-'''
-
-
 class MethodInfo():
+    """
+    A Method record
+    """
+
     def __init__(self, first_line_number, last_line_number, type, arguments, original_name):
         self.first_line_number = first_line_number
         self.last_line_number = last_line_number
@@ -408,14 +410,14 @@ class MethodInfo():
 CLASS_PACKAGE_SEPARATOR = '.'
 JAVA_PACKAGE_SEPARATOR = '/'
 
-'''
-Converts an external class name into an internal class name.
-@param externalClassName the external class name, e.g. "<code>java.lang.Object</code>"
-@return the internal class name,  e.g. "<code>java/lang/Object</code>".
-'''
-
 
 def external_class_name(internal_class_name):
+    """
+    Converts an external class name into an internal class name.
+    @param externalClassName the external class name, e.g. "<code>java.lang.Object</code>"
+    @return the internal class name,  e.g. "<code>java/lang/Object</code>".
+    """
+
     return internal_class_name.replace(JAVA_PACKAGE_SEPARATOR, CLASS_PACKAGE_SEPARATOR)
 
 
@@ -437,8 +439,7 @@ def parse_args():
 
 def main():
     options = parse_args()
-    retrace = Retrace(options.regex, options.verbose, options.mapping_file, options.stacktrace_file)
-
+    retrace = Retrace( options.mapping_file, options.verbose,options.regex, options.stacktrace_file)
     retrace.execute()
 
 
