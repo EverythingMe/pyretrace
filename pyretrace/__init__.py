@@ -103,10 +103,11 @@ class Retrace():
             type = None
             arguments = None
 
-            for expression_type_index in range(0, self.expression_type_count):
+            for expression_type_index in range(0, len(line.split(' '))):
                 start_index = matcher.start(expression_type_index + 1)
                 if start_index >= 0:
-                    match = matcher.group(expression_type_index + 1)
+                    match = line.split(' ')[expression_type_index]
+                    # match = matcher.group(expression_type_index + 1)
 
                     expression_type = self.expression_types[expression_type_index]
 
@@ -232,7 +233,6 @@ class Retrace():
             return obfuscated_field_name
         else:
             return ''
-
 
     def original_method_name(self, class_name, obfuscated_method_name, line_number, type, arguments, out_line, extra_outlines):
         extra_indent = -1
@@ -439,7 +439,7 @@ def parse_args():
 
 def main():
     options = parse_args()
-    retrace = Retrace( options.mapping_file, options.verbose,options.regex, options.stacktrace_file)
+    retrace = Retrace(options.mapping_file, options.verbose, options.regex, options.stacktrace_file)
     retrace.execute()
 
 
