@@ -103,11 +103,11 @@ class Retrace():
             type = None
             arguments = None
 
-            for expression_type_index in range(0, len(line.split(' '))):
+            for expression_type_index in range(0, self.expression_type_count):
                 start_index = matcher.start(expression_type_index + 1)
                 if start_index >= 0:
-                    match = line.split(' ')[expression_type_index]
-                    # match = matcher.group(expression_type_index + 1)
+                    # match = line.split(' ')[expression_type_index]
+                    match = matcher.group(expression_type_index + 1)
 
                     expression_type = self.expression_types[expression_type_index]
 
