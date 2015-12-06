@@ -3,12 +3,17 @@
 
 A python reimplementation on [Proguard][1]'s [Retrace][2], with a deobfuscation API for python.
 
+[![PyPI version](https://badge.fury.io/py/pyretrace.svg)](https://badge.fury.io/py/pyretrace)
 
 ### Installation
 
+	$ pip install pyretrace
+	
+from source:
+	
 	$ pip install https://github.com/EverythingMe/pyretrace.git
 	
-or if you're having permission issues
+or if you're having permission issues:
 
 	$ git clone https://github.com/EverythingMe/pyretrace.git
 	cd pyretrace
