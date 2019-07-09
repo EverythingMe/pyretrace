@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import sys
 
 
@@ -33,7 +35,7 @@ class MappingReader():
                     self.process_class_member_mapping(class_name, line, mapping_processor)
 
         except Exception as ex:
-            print 'Can\'t process mapping file (%s)' % ex
+            print('Can\'t process mapping file (%s)' % ex)
             sys.exit(1)
         finally:
             reader.close()

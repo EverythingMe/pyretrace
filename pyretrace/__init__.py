@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import argparse
 import re
 import sys
@@ -41,7 +43,7 @@ class Retrace():
         mapping_reader.pump(self)
 
         expression_buffer = ''
-        self.expression_types = list(xrange(32))
+        self.expression_types = list(range(32))
         self.expression_type_count = 0
 
         index = 0
@@ -85,7 +87,7 @@ class Retrace():
             if not line:
                 break
 
-            print self.deobfuscate(line, False)
+            print(self.deobfuscate(line, False))
 
     def deobfuscate_class(self, line):
         return self.original_class_name(line, False)
