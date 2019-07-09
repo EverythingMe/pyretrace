@@ -12,6 +12,6 @@ setup(
     author='Rotem Mizrachi-Meidan',
     author_email='rotem@everything.me',
     url='http://github.com/EverythingMe/pyretrace',
-    version='0.2.1',
+    version='0.3',
     packages=find_packages(),
 )
